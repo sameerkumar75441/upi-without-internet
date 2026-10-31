@@ -1,0 +1,29 @@
+services:
+  api:
+    build: ./server
+    environment:
+      PORT: 8080
+      MONGODB_URI: ${MONGODB_URI}
+      CORS_ORIGIN: ${CORS_ORIGIN}
+      PACKET_MAX_AGE_SECONDS: ${PACKET_MAX_AGE_SECONDS:-86400}
+      IDEMPOTENCY_TTL_SECONDS: ${IDEMPOTENCY_TTL_SECONDS:-86400}
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8080/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  web:
+    build:
+      context: ./client
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+    ports:
+      - "80:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
